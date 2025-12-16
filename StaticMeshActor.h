@@ -157,5 +157,4 @@ void AGridCharacter::OnCollisionOverlapBegin(UPrimitiveComponent* OverlappedComp
 			bIsMoving = false;
 		}
 	}
-
 }
