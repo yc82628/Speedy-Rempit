@@ -36,10 +36,10 @@ public:
 
 	// Audio (BP assign)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
-	USoundBase* naSound;
+	USoundBase* naSound;  // driving forward sound
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
-	USoundBase* CrashSound;
+	USoundBase* CrashSound; // crash
 
 private:
 	// Movement functions
@@ -55,11 +55,21 @@ private:
 	int32 ForwardProgress = 0;
 
 	// Helper functions
-	FVector WorldToGrid(FVector WorldPosition);
-	FVector GridToWorld(FVector GridPosition);
+	FVector WorldToGrid(FVector& WorldPosition) const;
+	FVector GridToWorld(FVector& GridPosition) const;
 
-	// Collision 
+	// Collision
 	UFUNCTION()
-	void OnCollisionOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
-		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	void OnCollisionOverlapBegin(
+		UPrimitiveComponent* OverlappedComp,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32                OtherBodyIndex,
+		bool                 bFromSweep,
+		const FHitResult& SweepResult
+	);
+
+	// Audio 
+	void Play_naSound();
+	void PlayCrashSound();
 };

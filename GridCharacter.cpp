@@ -6,7 +6,7 @@
 
 AGridCharacter::AGridCharacter()
 {
-	PrimaryActorTick::AGridCharacter()
+	PrimaryActorTick.bCanEvenTick = true;
 
 	// Create collision box
 	CollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionBox"));
@@ -20,7 +20,7 @@ AGridCharacter::AGridCharacter()
 
 void AGridCharacter::BeginPlay()
 {
-	Super::BeginPLay();
+	Super::BeginPlay();
 
 	//Initialise grid position
 	CurrentGridPosition = WorldToGrid(GetActorLocation());
@@ -36,7 +36,7 @@ void AGridCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	//Smooth movement 
+	// Smooth movement
 	if (bIsMoving)
 	{
 		MovementProgress += DeltaTime * MovementSpeed;
@@ -44,17 +44,17 @@ void AGridCharacter::Tick(float DeltaTime)
 		if (MovementProgress >= 1.0f)
 		{
 			// Movement complete
-			MovementProgress - 0.0f;
+			MovementProgress = 0.0f;
 			bIsMoving = false;
 			CurrentGridPosition = TargetGridPosition;
 			SetActorLocation(GridToWorld(CurrentGridPosition));
 		}
 		else
 		{
-			//Lerp between positions
-			FVector CurrentWorld = GridToWorld(CurrentGridPosition);
-			FVector TargetWorld = GridToWorld * TargetGridPosition);
-			FVector NewPosition = FMath::Lerp(CurrentWorld, TargetWorld, MovementProgress);
+			// Lerp between positions
+			const FVector CurrentWorld = GridToWorld(CurrentGridPosition);
+			const FVector TargetWorld = GridToWorld(TargetGridPosition);
+			const FVector NewPosition = FMath::Lerp(CurrentWorld, TargetWorld, MovementProgress);
 			SetActorLocation(NewPosition);
 		}
 	}
@@ -62,7 +62,7 @@ void AGridCharacter::Tick(float DeltaTime)
 
 void AGridCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	Super::SetupPlayerInputComponent(PlayerINputComponent);
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 	// Binding actions
 	PlayerInputComponent->BindAction("MoveForward", W_Pressed, this,
@@ -77,54 +77,68 @@ void AGridCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 void AGridCharacter::MoveForward()
 {
-	if (!bIsMoving)
+	if (bIsMoving)
 	{
-		TargetGridPosition = CurrentGridPosition + FVector(1, 0, 0);
-		bIsMoving = true;
-		MovementProgress = 0.0f;
-		ForwardProgress++; 
-
-		// Award point moving forward
-		if (SpdRemGameMode* GameMode = Cast<SpdRemGameMode>
-			(UGameplayStatistic::GetGameMode(this)))
-		{
-			GameMode->AddScore(1);
-		}
+		return;
 	}
+
+	TargetGridPosition = CurrentGridPosition + FVector(1, 0, 0);
+	bIsMoving = true;
+	MovementProgress = 0.0f;
+	ForwardProgress++;
+
+	// Award point moving forward
+	if (ASpdRemGameMode* GameMode = Cast<ASpdRemGameMode>(UGameplayStatics::GetGameMode(this)))
+	{
+		GameMode->AddScore(1);
+	}
+
+	Play_naSound();
 }
 
 void AGridCharacter::MoveBackward()
 {
-	if (!bIsMoving && ForwardProgress > 0)
+	if (!bIsMoving || ForwardProgress <= 0)
 	{
-		TargetGridPosition = CurrentGridPosition + FVector(-1, 0, 0);
-		bIsMoving = true;
-		MovementProgress = 0.0f;
-		ForwardProgress--;
+		return;
 	}
+
+	TargetGridPosition = CurrentGridPosition + FVector(-1, 0, 0);
+	bIsMoving = true;
+	MovementProgress = 0.0f;
+	ForwardProgress--;
+
+	Play_naSound();
 }
 
 void AGridCharacter::MoveLeft()
 {
 	if (!bIsMoving)
 	{
-		TargetGridPosition = CurrentGridPosition + FVector(0, -1, 0);
-		bIsMoving = true;
-		MovementProgress = 0.0f;
+		return;
 	}
+
+	TargetGridPosition = CurrentGridPosition + FVector(0, -1, 0);
+	bIsMoving = true;
+	MovementProgress = 0.0f;
+
+	Play_naSound();
 }
 
 void AGridCharacter::MoveRight()
 {
 	if (!bIsMoving)
 	{
-		TargetGridPosition = CurrentGridPosition + FVector(0, 1, 0);
-		bIsMoving = true;
-		MovementProgress = 0.0f;
+		return;
 	}
+	TargetGridPosition = CurrentGridPosition + FVector(0, 1, 0);
+	bIsMoving = true;
+	MovementProgress = 0.0f;
+
+	Play_naSound();
 }
 
-void AGridCharacter::WorldToGrid(FVector WorldPosition)
+void AGridCharacter::WorldToGrid(const FVector WorldPosition) const
 {
 	return FVector(
 		FMAth::RoundToInt(WorldPosition.X / GridSize)
@@ -133,28 +147,50 @@ void AGridCharacter::WorldToGrid(FVector WorldPosition)
 	);
 }
 
-FVector AGridCharacter::GridToWorld(FVector GridPosition)
+FVector AGridCharacter::GridToWorld(const FVector GridPosition) const
 {
 	return GridPosition * GridSize;
 }
 
-void AGridCharacter::OnCollisionOverlapBegin(UPrimitiveComponent* OverlappedComp,
-	AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
-	bool bFromSweep, const FHitResult& SweepResult)
+void AGridCharacter::OnCollisionOverlapBegin(
+	UPrimitiveComponent* OverlappedComp,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComp,
+	int32                OtherBodyIndex,
+	bool                 bFromSweep,
+	const FHitResult& SweepResult
+)
 {
-	if (OtherActor && OtherActor != this)
+	if (!OtherActor || OtherActor == this)
 	{
-		// If hit by a vehicle
-		if (OtherActor->ACtorHasTag("Vehicle"))
-		{
-			if (SpdRemGameMode* GameMode = Cast<SpdRemGameMode>
-				(UGameplayStatics::GetGameMode(this)))
-			{
-				GameMode->GameOver();
-			}
+		return;
+	}
 
-			// Disable movement
-			bIsMoving = false;
+	// If hit by a vehicle
+	if (OtherActor->ActorHasTag(TEXT("Vehicle")))
+	{
+		if (ASpdRemGameMode* GameMode = Cast<ASpdRemGameMode>(UGameplayStatics::GetGameMode(this)))
+		{
+			GameMode->GameOver();
 		}
+
+		PlayCrashSound();
+		bIsMoving = false;
+	}
+}
+
+void AGridCharacter::Play_naSound()
+{
+	if (naSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, naSound, GetActorLocation());
+	}
+}
+
+void AGridCharacter::PlayCrashSound()
+{
+	if (CrashSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, CrashSound, GetActorLocation());
 	}
 }
