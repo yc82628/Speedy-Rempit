@@ -20,7 +20,7 @@ AGridCharacter::AGridCharacter()
 
 void AGridCharacter::BeginPlay()
 {
-	Super::BeginPLay();
+	Super::BeginPlay();
 
 	//Initialise grid position
 	CurrentGridPosition = WorldToGrid(GetActorLocation());
@@ -62,7 +62,7 @@ void AGridCharacter::Tick(float DeltaTime)
 
 void AGridCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	Super::SetupPlayerInputComponent(PlayerINputComponent);
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 	// Binding actions
 	PlayerInputComponent->BindAction("MoveForward", W_Pressed, this,
@@ -157,4 +157,5 @@ void AGridCharacter::OnCollisionOverlapBegin(UPrimitiveComponent* OverlappedComp
 			bIsMoving = false;
 		}
 	}
+
 }
